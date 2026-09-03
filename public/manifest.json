@@ -1,0 +1,14 @@
+{
+  "name": "NCS마수리",
+  "short_name": "NCS마수리",
+  "description": "NCS 응용수리 전용 학습 앱 - 문제 위에 바로 필기하며 풀어요",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F4F5F7",
+  "theme_color": "#3654FF",
+  "orientation": "any",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

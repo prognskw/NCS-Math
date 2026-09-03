@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>NCS마수리</title>
+
+  <!-- 홈 화면에 추가했을 때 앱처럼 보이도록 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NCS마수리" />
+  <meta name="theme-color" content="#3654FF" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="app-header">
+      <svg class="logo-mark" width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="11" fill="#12131A"/>
+        <rect x="7" y="6.5" width="26" height="9" rx="3" fill="#EBEEFF"/>
+        <rect x="10.5" y="9.7" width="12" height="2.6" rx="1.3" fill="#3654FF"/>
+        <rect x="7" y="19" width="6" height="4.6" rx="1.4" fill="#3A3D4C"/>
+        <rect x="15" y="19" width="6" height="4.6" rx="1.4" fill="#3A3D4C"/>
+        <rect x="23" y="19" width="10" height="4.6" rx="1.4" fill="#FFD166"/>
+        <rect x="7" y="25.4" width="6" height="4.6" rx="1.4" fill="#3A3D4C"/>
+        <rect x="15" y="25.4" width="6" height="4.6" rx="1.4" fill="#3A3D4C"/>
+        <rect x="23" y="25.4" width="10" height="4.6" rx="1.4" fill="#3654FF"/>
+        <rect x="7" y="31.8" width="14" height="4.6" rx="1.4" fill="#3A3D4C"/>
+        <rect x="23" y="31.8" width="10" height="4.6" rx="1.4" fill="#3A3D4C"/>
+      </svg>
+      <div class="wordmark-pill">
+        <span class="wm-ncs">NCS</span><span class="wm-name">마수리</span>
+      </div>
+    </div>
+
+    <!-- 대시보드 -->
+    <section class="view" id="view-dashboard">
+      <div class="view-title-row"><div class="view-title">대시보드</div></div>
+      <div class="placeholder-view">
+        <div class="placeholder-icon">⌂</div>
+        <div class="placeholder-title">대시보드는 준비 중이에요</div>
+        <div class="placeholder-sub">학습 현황, 유형별 정답률 같은 통계가<br />이곳에 표시될 예정입니다.</div>
+      </div>
+    </section>
+
+    <!-- 응용수리 -->
+    <section class="view active" id="view-eung">
+      <div class="view-title-row">
+        <div class="view-title">응용수리</div>
+        <div class="progress" id="progress">1 / 6</div>
+      </div>
+
+      <div class="type-filter" id="typeFilter"></div>
+
+      <div class="card">
+        <div class="accent-bar" id="accentBar"></div>
+        <div class="card-top">
+          <span class="q-number">문제</span>
+          <span class="type-badge" id="typeBadge">유형</span>
+        </div>
+        <div class="writable" id="writable">
+          <div class="problem-wrap" id="problemWrap">
+            <div class="problem-text" id="problemText"></div>
+            <div id="tableSlot"></div>
+          </div>
+          <div class="choices" id="choices"></div>
+          <canvas class="draw-layer" id="drawCanvas"></canvas>
+        </div>
+        <div class="explain" id="explain"></div>
+      </div>
+
+      <div class="footer-actions">
+        <button class="btn btn-ghost" id="clearBtn">필기 지우기</button>
+        <button class="btn btn-primary" id="checkBtn">정답 확인</button>
+      </div>
+      <div class="footer-actions">
+        <button class="btn btn-secondary" id="nextBtn">다음 문제</button>
+      </div>
+    </section>
+
+    <!-- 계산연습 -->
+    <section class="view" id="view-calc">
+      <div class="view-title-row"><div class="view-title">계산연습</div></div>
+      <div class="placeholder-view">
+        <div class="placeholder-icon">✎</div>
+        <div class="placeholder-title">계산연습은 준비 중이에요</div>
+        <div class="placeholder-sub">사칙연산·암산 등 순수 계산 훈련 모드가<br />이곳에 추가될 예정입니다.</div>
+      </div>
+    </section>
+
+    <!-- 오답노트 -->
+    <section class="view" id="view-wrong">
+      <div class="view-title-row"><div class="view-title">오답노트</div></div>
+      <div class="placeholder-view">
+        <div class="placeholder-icon">⚑</div>
+        <div class="placeholder-title">오답노트는 준비 중이에요</div>
+        <div class="placeholder-sub">틀린 문제와 그때 남긴 필기를<br />다시 볼 수 있게 될 예정입니다.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 사이드 도킹 필기 도구 (드래그로 위치 이동, 탭하면 펼쳐짐) -->
+  <div class="pen-dock" id="penDock" style="top: 55%;">
+    <div class="pen-drawer" id="penDrawer">
+      <button class="pen-mode-toggle" id="penModeBtn">✎ 필기 입력 켜기</button>
+      <div class="tool-row">
+        <div class="tool-group">
+          <button class="tool-btn active" id="penToolBtn" title="펜">✎</button>
+          <button class="tool-btn" id="eraserToolBtn" title="지우개">
+            <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.5 3.5c1-1 2.6-1 3.6 0l1.4 1.4c1 1 1 2.6 0 3.6L13 18H6l-3-3L14.5 4.5Z" fill="currentColor" opacity="0.18"/>
+              <path d="M17.5 3.5c1-1 2.6-1 3.6 0l1.4 1.4c1 1 1 2.6 0 3.6L13 18H6l-3-3L14.5 4.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M6 18H21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="divider"></div>
+        <button class="tool-btn" id="undoBtn" title="뒤로가기">↺</button>
+        <button class="tool-btn" id="redoBtn" title="앞으로가기">↻</button>
+      </div>
+      <div class="tool-row">
+        <span class="tool-label">색상</span>
+        <button class="swatch active" data-color="#3654FF" style="background:#3654FF"></button>
+        <button class="swatch" data-color="#E23744" style="background:#E23744"></button>
+        <button class="swatch" data-color="#16A34A" style="background:#16A34A"></button>
+        <button class="swatch" data-color="#FF8A3D" style="background:#FF8A3D"></button>
+        <button class="swatch" data-color="#12131A" style="background:#12131A"></button>
+      </div>
+      <div class="tool-row">
+        <span class="tool-label">굵기</span>
+        <button class="size-btn active" data-size="2.5"><span style="width:5px;height:5px;"></span></button>
+        <button class="size-btn" data-size="4.5"><span style="width:8px;height:8px;"></span></button>
+        <button class="size-btn" data-size="7"><span style="width:12px;height:12px;"></span></button>
+      </div>
+    </div>
+    <button class="pen-handle" id="penHandle" title="드래그해서 위치 이동 · 탭해서 열기/닫기">✎</button>
+  </div>
+
+  <!-- bottom tab bar -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab-item" data-tab="dashboard"><span class="tab-icon">⌂</span><span class="tab-label">대시보드</span></button>
+    <button class="tab-item active" data-tab="eung"><span class="tab-icon">∑</span><span class="tab-label">응용수리</span></button>
+    <button class="tab-item" data-tab="calc"><span class="tab-icon">✎</span><span class="tab-label">계산연습</span></button>
+    <button class="tab-item" data-tab="wrong"><span class="tab-icon">⚑</span><span class="tab-label">오답노트</span></button>
+  </nav>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
