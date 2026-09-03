@@ -21,7 +21,10 @@
 html, body { margin: 0; padding: 0; }
 /* body 높이를 뷰포트에 정확히 고정(min-height가 아니라 height)해서, 정답 확인 후
    해설처럼 내용이 늘어나도 페이지 전체가 뷰포트보다 커지지 않게 함. 못 담는 내용은
-   .writable 안에서만 스크롤되고(overflow-y:auto), 하단 버튼은 항상 화면 안에 유지됨 */
+   .writable 안에서만 스크롤되고(overflow-y:auto), 하단 버튼은 항상 화면 안에 유지됨.
+   + 실기기(홈 화면에 추가한 standalone 모드, status-bar-style=black-translucent)에서는
+   상태바가 화면 위에 반투명하게 겹쳐지므로, safe-area-inset-top만큼 위쪽 여백을
+   명시적으로 더해서 헤더가 상태바 밑으로 잘려 들어가지 않게 함 */
 body {
   background: var(--bg);
   font-family: "Pretendard", sans-serif;
@@ -31,7 +34,7 @@ body {
   overflow: hidden;
   display: flex;
   justify-content: center;
-  padding: 20px 10px var(--tabbar-clearance);
+  padding: calc(20px + env(safe-area-inset-top)) 10px var(--tabbar-clearance);
 }
 /* #app을 세로 flex 컬럼으로 만들어서, 응용수리 화면의 문제 카드가 남는 세로 공간을
    전부 채우도록(flex:1) 하고 그 아래 버튼들이 화면 크기에 관계없이 항상 하단탭바
@@ -39,7 +42,7 @@ body {
 #app { width: 100%; max-width: var(--app-max-w); min-height: 0; position: relative; display: flex; flex-direction: column; }
 @media (orientation: landscape) and (min-width: 780px) {
   :root { --app-max-w: 1180px; }
-  body { padding: 16px 20px var(--tabbar-clearance); }
+  body { padding: calc(16px + env(safe-area-inset-top)) 20px var(--tabbar-clearance); }
 }
 
 /* 응용수리 화면(+ 항상 보이는 헤더) 안에서는 롱프레스 시 텍스트 선택/콜아웃 UI가
