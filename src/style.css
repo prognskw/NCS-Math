@@ -110,16 +110,17 @@ body {
    포함) 캔버스가 그 아래 선지/버튼 클릭을 절대 가로채지 않도록 함 */
 canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 10; touch-action: none; pointer-events: none; }
 
-.choices { padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--border); max-width: 460px; margin: 0 auto; width: 100%; }
+.choices { padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--border); max-width: 460px; margin: 0 auto; width: 100%; }
 @media (orientation: landscape) and (min-width: 780px) {
   /* align-items: stretch가 남는 세로 공간을 problem-wrap/choices 양쪽에 그대로
-     전달해서, 카드가 자란 만큼 문제 영역도 자연스럽게 넓어짐 */
-  .writable { display: grid; grid-template-columns: 1.35fr 1fr; align-items: stretch; }
-  .choices { border-top: none; border-left: 1px solid var(--border); padding: 14px 18px; justify-content: center; }
+     전달해서, 카드가 자란 만큼 문제 영역도 자연스럽게 넓어짐.
+     오른쪽 트랙 폭을 선지 글자 수에 맞는 정도(260~320px)로만 좁게 잡아서
+     선지 칸 안에 남는 빈 공간을 없애고, 남는 폭은 전부 왼쪽(문제) 칸으로 감 */
+  .writable { display: grid; grid-template-columns: 1fr minmax(260px, 320px); align-items: stretch; }
+  .choices { border-top: none; border-left: 1px solid var(--border); padding: 16px 20px; justify-content: center; max-width: none; margin: 0; }
 }
-/* 선지 칸을 좀 더 납작하게 줄여서 문제 아래/선지 주변 여백이 더 넓어 보이게 함 */
 .choice {
-  display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; border-radius: 13px;
+  display: flex; align-items: center; gap: 10px; text-align: left; padding: 11px 13px; border-radius: 13px;
   border: 1.5px solid var(--border); background: var(--surface); font-family: "Pretendard", sans-serif;
   font-size: 14.5px; font-weight: 500; color: var(--ink); cursor: pointer;
 }
