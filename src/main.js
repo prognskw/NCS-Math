@@ -397,16 +397,77 @@ penHandle.addEventListener("pointercancel", () => {
 });
 
 // ---- 필기 그리기 ----
+// 빠르게 그을 때 획이 끊겨 보이는 문제 개선:
+// 1) pointermove 하나당 좌표 하나만 쓰지 않고 getCoalescedEvents()로 브라우저가
+//    묶어서 전달한 세부 좌표를 전부 사용 (좌표 샘플 손실 방지)
+// 2) 매번 캔버스 전체를 지우고 다시 그리는(redraw) 대신, 그리는 도중에는
+//    새로 들어온 구간만 이어 그리는 증분 드로잉 사용 + requestAnimationFrame으로
+//    한 프레임에 여러 이벤트를 모아 한 번만 페인트 (scheduleRedraw)
+// redraw()(전체 재렌더)는 문제 전환/undo/redo/전체 지우기/리사이즈 때만 호출됨.
 let drawing = false;
 let activeStroke = null;
+let lastDrawnPoint = null;
+let pendingPoints = [];
+let rafScheduled = false;
 
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
+function applyStrokeStyle(stroke) {
+  ctx.strokeStyle = stroke.erase ? "rgba(0,0,0,1)" : stroke.color;
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.globalCompositeOperation = stroke.erase ? "destination-out" : "source-over";
+  ctx.lineWidth = stroke.size;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+}
+
+// 클릭/탭만 하고 움직이지 않아도 점 하나는 보이도록 시작점에 작은 점을 찍음
+function paintDot(stroke, pos) {
+  applyStrokeStyle(stroke);
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, stroke.size / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function paintSegment(stroke, from, to) {
+  applyStrokeStyle(stroke);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.globalCompositeOperation = "source-over";
+}
+
+// 아직 화면에 그려지지 않고 대기 중인 좌표들을 실제로 페인트하고 비움
+function flushPendingPoints() {
+  if (!activeStroke || !pendingPoints.length) return;
+  pendingPoints.forEach((pos) => {
+    activeStroke.points.push(pos);
+    paintSegment(activeStroke, lastDrawnPoint, pos);
+    lastDrawnPoint = pos;
+  });
+  pendingPoints = [];
+}
+
+function scheduleRedraw() {
+  if (rafScheduled) return;
+  rafScheduled = true;
+  requestAnimationFrame(() => {
+    rafScheduled = false;
+    // rAF가 실행되기 전에 이미 stroke가 끝났으면(endStroke에서 동기적으로
+    // flush 처리함) 여기선 아무것도 하지 않음
+    if (!drawing) return;
+    flushPendingPoints();
+  });
+}
+
 canvas.addEventListener("pointerdown", (e) => {
   if (!penMode) return;
+  e.preventDefault();
   drawing = true;
   canvas.setPointerCapture(e.pointerId);
   const pos = getPos(e);
@@ -418,20 +479,29 @@ canvas.addEventListener("pointerdown", (e) => {
   strokesByProblem[p.id] = strokesByProblem[p.id] || [];
   strokesByProblem[p.id].push(activeStroke);
   redoByProblem[p.id] = [];
-  redraw();
+  lastDrawnPoint = pos;
+  pendingPoints = [];
+  paintDot(activeStroke, pos);
 });
 
 canvas.addEventListener("pointermove", (e) => {
   if (!drawing || !penMode) return;
-  const pos = getPos(e);
-  activeStroke.points.push(pos);
-  redraw();
+  e.preventDefault();
+  const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
+  const pts = events.length ? events : [e];
+  pts.forEach((ev) => pendingPoints.push(getPos(ev)));
+  scheduleRedraw();
 });
 
 function endStroke() {
-  if (drawing) persistStrokes();
+  if (drawing) {
+    flushPendingPoints();
+    persistStrokes();
+  }
   drawing = false;
   activeStroke = null;
+  lastDrawnPoint = null;
+  pendingPoints = [];
 }
 canvas.addEventListener("pointerup", endStroke);
 canvas.addEventListener("pointercancel", endStroke);
@@ -478,7 +548,33 @@ tabButtons.forEach((btn) => {
 
 renderTypeFilter();
 renderProblem();
-switchTab("eung");
+switchTab("dashboard");
+
+// ---- 로딩 화면 ----
+// 최소 표시 시간을 채우고, 폰트/초기 렌더 등 페이지 로드가 끝난 뒤에 페이드아웃.
+// 이미 load 이벤트가 지난 뒤(스크립트가 늦게 실행된 경우)라면 바로 최소 시간만 기다림.
+const loadingScreen = document.getElementById("loadingScreen");
+const LOADING_MIN_MS = 600;
+const loadingStart = Date.now();
+function hideLoadingScreen() {
+  const elapsed = Date.now() - loadingStart;
+  const wait = Math.max(0, LOADING_MIN_MS - elapsed);
+  setTimeout(() => {
+    loadingScreen.classList.add("hide");
+    loadingScreen.addEventListener(
+      "transitionend",
+      () => {
+        loadingScreen.style.display = "none";
+      },
+      { once: true }
+    );
+  }, wait);
+}
+if (document.readyState === "complete") {
+  hideLoadingScreen();
+} else {
+  window.addEventListener("load", hideLoadingScreen, { once: true });
+}
 
 // 시작할 때 로컬 캐시로 먼저 빠르게 그려주고, 클라우드에서 최신 데이터를 가져와 보강
 syncFromCloud(
