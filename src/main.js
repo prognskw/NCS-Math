@@ -219,13 +219,10 @@ function gradeAnswer() {
   requestAnimationFrame(resizeCanvas);
 }
 
+// 선지를 고르지 않아도 정답 확인이 가능함 (그 경우 정답만 초록색으로 표시됨)
 checkBtn.addEventListener("click", () => {
   if (answered) {
     resetAnswerUI();
-    return;
-  }
-  if (selectedChoice === null) {
-    alert("답을 먼저 선택해주세요.");
     return;
   }
   gradeAnswer();
@@ -350,21 +347,40 @@ penHandle.addEventListener("pointermove", (e) => {
   if (!dockDragging) return;
   const dx = e.clientX - dockStartX;
   const dy = e.clientY - dockStartY;
-  if (Math.abs(dx) > 6 || Math.abs(dy) > 6) dockDragMoved = true;
+  if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+    if (!dockDragMoved) {
+      // 드래그가 시작되는 순간: 서랍은 닫고, 손잡이를 도킹된 모양(반원)에서
+      // 완전한 원 모양으로 바꿔서 "떠 있는" 상태임을 보여줌
+      penDrawer.classList.remove("open");
+      penDock.classList.add("dragging");
+      // 모양이 바뀌면서 크기가 달라지므로, 기준점을 다시 잡아 위치가 튀지 않게 함
+      dockStartX = e.clientX;
+      dockStartY = e.clientY;
+      const rect = penDock.getBoundingClientRect();
+      dockStartTop = rect.top + penDock.offsetHeight / 2;
+      dockStartLeft = rect.left;
+    }
+    dockDragMoved = true;
+  }
   if (!dockDragMoved) return;
 
-  const newTop = clampDockTop(dockStartTop + dy);
+  // dockStartX/Y/Top/Left가 방금 위에서 재조정됐을 수 있으므로 다시 계산해서 사용
+  const dx2 = e.clientX - dockStartX;
+  const dy2 = e.clientY - dockStartY;
+
+  const newTop = clampDockTop(dockStartTop + dy2);
   penDock.style.top = newTop + "px";
 
   const dockWidth = penDock.offsetWidth;
   const maxLeft = window.innerWidth - dockWidth;
-  const newLeft = Math.min(maxLeft, Math.max(0, dockStartLeft + dx));
+  const newLeft = Math.min(maxLeft, Math.max(0, dockStartLeft + dx2));
   penDock.style.left = newLeft + "px";
   penDock.style.right = "auto";
 });
 
 penHandle.addEventListener("pointerup", () => {
   dockDragging = false;
+  penDock.classList.remove("dragging");
   if (!dockDragMoved) {
     penDrawer.classList.toggle("open");
     return;
@@ -377,6 +393,7 @@ penHandle.addEventListener("pointerup", () => {
 });
 penHandle.addEventListener("pointercancel", () => {
   dockDragging = false;
+  penDock.classList.remove("dragging");
 });
 
 // ---- 필기 그리기 ----
