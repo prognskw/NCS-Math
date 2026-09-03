@@ -17,6 +17,7 @@
 </head>
 <body>
   <div id="app">
+    <canvas class="draw-layer" id="drawCanvas"></canvas>
     <div class="app-header">
       <svg class="logo-mark" width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="40" height="40" rx="11" fill="#12131A"/>
@@ -55,7 +56,7 @@
 
       <div class="type-filter" id="typeFilter"></div>
 
-      <div class="card">
+      <div class="card" id="problemCard">
         <div class="accent-bar" id="accentBar"></div>
         <div class="card-top">
           <span class="q-number">문제</span>
@@ -67,13 +68,12 @@
             <div id="tableSlot"></div>
           </div>
           <div class="choices" id="choices"></div>
-          <canvas class="draw-layer" id="drawCanvas"></canvas>
         </div>
         <div class="explain" id="explain"></div>
       </div>
 
       <div class="footer-actions">
-        <button class="btn btn-ghost" id="clearBtn">필기 지우기</button>
+        <button class="btn btn-ghost" id="hideDrawingBtn">필기 가리기</button>
         <button class="btn btn-primary" id="checkBtn">정답 확인</button>
       </div>
       <div class="footer-actions">
@@ -135,6 +135,14 @@
         <button class="size-btn" data-size="4.5"><span style="width:8px;height:8px;"></span></button>
         <button class="size-btn" data-size="7"><span style="width:12px;height:12px;"></span></button>
       </div>
+      <button class="clear-all-btn" id="clearAllBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 7h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 7l1 13a1.5 1.5 0 0 0 1.5 1.4h7a1.5 1.5 0 0 0 1.5-1.4l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        모두 지우기
+      </button>
     </div>
     <button class="pen-handle" id="penHandle" title="드래그해서 위치 이동 · 탭해서 열기/닫기">✎</button>
   </div>

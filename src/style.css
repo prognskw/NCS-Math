@@ -11,7 +11,7 @@
   --correct-bg: #e9f9ee;
   --wrong: #e23744;
   --wrong-bg: #fdebec;
-  --app-max-w: 620px;
+  --app-max-w: 720px;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -22,11 +22,20 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 20px 16px 96px;
+  padding: 20px 10px 96px;
 }
-#app { width: 100%; max-width: var(--app-max-w); }
+#app { width: 100%; max-width: var(--app-max-w); position: relative; }
 @media (orientation: landscape) and (min-width: 780px) {
-  :root { --app-max-w: 920px; }
+  :root { --app-max-w: 1180px; }
+  body { padding: 16px 20px 96px; }
+}
+
+/* 응용수리 화면(+ 항상 보이는 헤더) 안에서는 롱프레스 시 텍스트 선택/콜아웃 UI가
+   뜨면 안 됨 (필기 캔버스가 이 영역 전체를 덮고 있어서 선택 제스처와 충돌함) */
+#view-eung, #view-eung *, .app-header, .app-header * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* header / logo */
@@ -63,7 +72,7 @@ body {
 .card-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 0; }
 .type-badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 11px; }
 .q-number { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
-.problem-wrap { position: relative; padding: 14px 20px 20px; min-height: 220px; }
+.problem-wrap { position: relative; padding: 14px 20px 20px; min-height: 220px; max-width: 620px; margin: 0 auto; }
 
 .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; text-align: center; line-height: 1.1; font-size: 0.88em; margin: 0 2px; position: relative; top: -1px; }
 .frac .num { padding: 0 3px 1px; border-bottom: 1.3px solid currentColor; }
@@ -72,9 +81,12 @@ body {
 .problem-text { font-size: 17px; font-weight: 500; line-height: 28px; color: var(--ink); white-space: pre-wrap; position: relative; z-index: 1; pointer-events: none; }
 .problem-table { margin-top: 10px; border-collapse: collapse; font-size: 14px; position: relative; z-index: 1; pointer-events: none; }
 .problem-table td, .problem-table th { border: 1px solid var(--border); padding: 5px 12px; text-align: center; background: #fafafb; }
-canvas.draw-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; touch-action: none; }
 
-.choices { padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--border); }
+/* 필기 캔버스: #app 최상단(헤더)부터 문제 카드 하단까지 화면 전체를 덮는 오버레이.
+   위치/크기는 main.js의 resizeCanvas()가 헤더/카드 위치를 기준으로 계산해서 지정함. */
+canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 10; touch-action: none; }
+
+.choices { padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--border); max-width: 460px; margin: 0 auto; width: 100%; }
 @media (orientation: landscape) and (min-width: 780px) {
   .writable { display: grid; grid-template-columns: 1.35fr 1fr; align-items: stretch; }
   .problem-wrap { min-height: 320px; }
@@ -157,6 +169,34 @@ canvas.draw-layer { position: absolute; top: 0; left: 0; width: 100%; height: 10
   gap: 8px;
 }
 .pen-drawer.open { opacity: 1; pointer-events: auto; transform: translateY(-50%) translateX(0); }
+
+/* 왼쪽에 도킹된 경우: 손잡이가 왼쪽 가장자리에 붙고, 서랍은 오른쪽으로 펼쳐짐 */
+.pen-dock.dock-left { right: auto; left: 0; }
+.pen-dock.dock-left .pen-handle {
+  border-radius: 0 16px 16px 0;
+  box-shadow: 6px 0 16px rgba(18, 19, 26, 0.22);
+}
+.pen-dock.dock-left .pen-drawer {
+  right: auto;
+  left: 42px;
+  transform: translateY(-50%) translateX(-10px);
+}
+.pen-dock.dock-left .pen-drawer.open { transform: translateY(-50%) translateX(0); }
+
+.clear-all-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(226, 55, 68, 0.14);
+  color: #ff8f97;
+  font-family: "Pretendard", sans-serif;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-top: 2px;
+}
 .pen-mode-toggle {
   width: 100%;
   padding: 9px 10px;
