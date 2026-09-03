@@ -33,10 +33,13 @@ const choicesEl = document.getElementById("choices");
 const explainEl = document.getElementById("explain");
 const checkBtn = document.getElementById("checkBtn");
 const nextBtn = document.getElementById("nextBtn");
-const clearBtn = document.getElementById("clearBtn");
+const hideDrawingBtn = document.getElementById("hideDrawingBtn");
+const clearAllBtn = document.getElementById("clearAllBtn");
 const canvas = document.getElementById("drawCanvas");
 const ctx = canvas.getContext("2d");
-const writable = document.getElementById("writable");
+const appEl = document.getElementById("app");
+const headerEl = document.querySelector(".app-header");
+const problemCard = document.getElementById("problemCard");
 const accentBar = document.getElementById("accentBar");
 const typeFilterEl = document.getElementById("typeFilter");
 
@@ -62,13 +65,24 @@ function currentProblem() {
   return filtered[current];
 }
 
+// 캔버스는 #app 최상단(헤더)부터 문제 카드 하단까지 화면에 보이는 전체 영역을
+// 덮도록 배치한다 (헤더, 유형 필터, 카드 바깥 여백 어디에 그려도 필기가 남게 됨).
 function resizeCanvas() {
-  const rect = writable.getBoundingClientRect();
+  const appRect = appEl.getBoundingClientRect();
+  const headerRect = headerEl.getBoundingClientRect();
+  const cardRect = problemCard.getBoundingClientRect();
+  const top = headerRect.top - appRect.top;
+  const height = cardRect.bottom - headerRect.top;
+  const width = appRect.width;
+
+  canvas.style.left = "0px";
+  canvas.style.top = top + "px";
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  canvas.style.width = rect.width + "px";
-  canvas.style.height = rect.height + "px";
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   redraw();
 }
@@ -157,7 +171,7 @@ function renderProblem() {
     btn.className = "choice";
     btn.innerHTML = `<span class="choice-mark">${i + 1}</span><span>${formatFractions(escapeHtml(c))}</span>`;
     btn.addEventListener("click", () => {
-      if (answered) return;
+      if (answered) resetAnswerUI();
       selectedChoice = i;
       [...choicesEl.children].forEach((el) => el.classList.remove("selected"));
       btn.classList.add("selected");
@@ -175,13 +189,22 @@ function renderProblem() {
   requestAnimationFrame(resizeCanvas);
 }
 
-checkBtn.addEventListener("click", () => {
-  if (answered) return;
+// 정답 확인 후 채점 상태(정답/오답 색상, disabled, 해설)를 되돌려서
+// 다시 "정답 확인"을 누를 수 있는 중립 상태로 만듦. 사용자가 골랐던 선택(selectedChoice)
+// 자체는 유지하므로 .selected 표시는 그대로 남는다.
+function resetAnswerUI() {
+  answered = false;
+  [...choicesEl.children].forEach((el) => {
+    el.removeAttribute("disabled");
+    el.classList.remove("correct", "wrong");
+  });
+  explainEl.classList.remove("show");
+  checkBtn.textContent = "정답 확인";
+  requestAnimationFrame(resizeCanvas);
+}
+
+function gradeAnswer() {
   const p = currentProblem();
-  if (selectedChoice === null) {
-    alert("답을 먼저 선택해주세요.");
-    return;
-  }
   answered = true;
   [...choicesEl.children].forEach((el, i) => {
     el.setAttribute("disabled", "true");
@@ -192,6 +215,20 @@ checkBtn.addEventListener("click", () => {
     .map((s) => `<div class="solution"><div class="solution-title">${s.title}</div>${formatFractions(s.body)}</div>`)
     .join("");
   explainEl.classList.add("show");
+  checkBtn.textContent = "정답 가리기";
+  requestAnimationFrame(resizeCanvas);
+}
+
+checkBtn.addEventListener("click", () => {
+  if (answered) {
+    resetAnswerUI();
+    return;
+  }
+  if (selectedChoice === null) {
+    alert("답을 먼저 선택해주세요.");
+    return;
+  }
+  gradeAnswer();
 });
 
 // 정답을 고르지 않아도 다음 문제로 넘어갈 수 있음
@@ -200,7 +237,16 @@ nextBtn.addEventListener("click", () => {
   renderProblem();
 });
 
-clearBtn.addEventListener("click", () => {
+// "필기 지우기" 자리는 이제 필기를 지우지 않고 화면에서만 보였다 안 보였다 하는 토글.
+// 실제 삭제(데이터 자체를 지우는 것)는 펜 트레이 안의 clearAllBtn으로만 가능.
+let drawingHidden = false;
+hideDrawingBtn.addEventListener("click", () => {
+  drawingHidden = !drawingHidden;
+  canvas.style.visibility = drawingHidden ? "hidden" : "visible";
+  hideDrawingBtn.textContent = drawingHidden ? "필기 보이기" : "필기 가리기";
+});
+
+clearAllBtn.addEventListener("click", () => {
   const p = currentProblem();
   strokesByProblem[p.id] = [];
   redoByProblem[p.id] = [];
@@ -266,11 +312,14 @@ document.querySelectorAll(".swatch").forEach((sw) => {
   });
 });
 
-// ---- 사이드 도킹: 드래그로 위치 이동, 탭하면 서랍 열기/닫기 ----
+// ---- 사이드 도킹: 세로/가로 드래그로 위치 이동, 탭하면 서랍 열기/닫기 ----
 let dockDragging = false;
 let dockDragMoved = false;
+let dockStartX = 0;
 let dockStartY = 0;
 let dockStartTop = 0;
+let dockStartLeft = 0;
+let dockSide = "right"; // 'left' | 'right'
 
 function clampDockTop(px) {
   const min = 60;
@@ -278,27 +327,53 @@ function clampDockTop(px) {
   return Math.min(max, Math.max(min, px));
 }
 
+function setDockSide(side) {
+  dockSide = side;
+  penDock.classList.toggle("dock-left", side === "left");
+  // 드래그 중에 준 인라인 left/right를 지워서 CSS(.dock-left 규칙)가 가장자리에 붙이게 함
+  penDock.style.left = "";
+  penDock.style.right = "";
+}
+
 penHandle.addEventListener("pointerdown", (e) => {
   dockDragging = true;
   dockDragMoved = false;
+  dockStartX = e.clientX;
   dockStartY = e.clientY;
-  dockStartTop = penDock.getBoundingClientRect().top + penDock.offsetHeight / 2;
+  const rect = penDock.getBoundingClientRect();
+  dockStartTop = rect.top + penDock.offsetHeight / 2;
+  dockStartLeft = rect.left;
   penHandle.setPointerCapture(e.pointerId);
 });
 
 penHandle.addEventListener("pointermove", (e) => {
   if (!dockDragging) return;
+  const dx = e.clientX - dockStartX;
   const dy = e.clientY - dockStartY;
-  if (Math.abs(dy) > 6) dockDragMoved = true;
+  if (Math.abs(dx) > 6 || Math.abs(dy) > 6) dockDragMoved = true;
+  if (!dockDragMoved) return;
+
   const newTop = clampDockTop(dockStartTop + dy);
   penDock.style.top = newTop + "px";
+
+  const dockWidth = penDock.offsetWidth;
+  const maxLeft = window.innerWidth - dockWidth;
+  const newLeft = Math.min(maxLeft, Math.max(0, dockStartLeft + dx));
+  penDock.style.left = newLeft + "px";
+  penDock.style.right = "auto";
 });
 
 penHandle.addEventListener("pointerup", () => {
   dockDragging = false;
   if (!dockDragMoved) {
     penDrawer.classList.toggle("open");
+    return;
   }
+  // 화면 가로 중앙 기준으로 더 가까운 가장자리에 스냅
+  const rect = penDock.getBoundingClientRect();
+  const center = rect.left + rect.width / 2;
+  const side = center < window.innerWidth / 2 ? "left" : "right";
+  setDockSide(side);
 });
 penHandle.addEventListener("pointercancel", () => {
   dockDragging = false;
@@ -374,6 +449,7 @@ function switchTab(tabId) {
   });
   penDock.classList.toggle("show-tab", tabId === "eung");
   if (tabId !== "eung") penDrawer.classList.remove("open");
+  canvas.style.display = tabId === "eung" ? "block" : "none";
   if (tabId === "eung") {
     requestAnimationFrame(resizeCanvas);
   }
