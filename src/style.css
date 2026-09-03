@@ -12,11 +12,12 @@
   --wrong: #e23744;
   --wrong-bg: #fdebec;
   --app-max-w: 720px;
-  /* 하단 탭바 실제 높이(고정 부분 ~40px, 탭바 자체를 최대한 얇게 줄임) + 여유 간격.
-     탭바와 똑같이 env(safe-area-inset-bottom)을 더해서, 홈 인디케이터가 있는
-     기기에서도 버튼이 탭바에 가려지지 않으면서 탭바와 최대한 가깝게 붙도록 함
-     (문제 풀이 공간을 넓히기 위해 여유 간격도 최소로 줄임) */
-  --tabbar-clearance: calc(40px + env(safe-area-inset-bottom) + 6px);
+  /* 하단 탭바 실제 높이(고정 부분 37px, 탭바 자체를 실사용 가능한 한도까지
+     최대한 얇게 줄임) + 여유 간격. 탭바와 똑같이 env(safe-area-inset-bottom)을
+     더해서, 홈 인디케이터가 있는 기기에서도 버튼이 탭바에 가려지지 않으면서
+     탭바와 최대한 가깝게 붙도록 함 (문제 풀이 공간을 넓히기 위해 여유 간격도
+     최소로 줄임) */
+  --tabbar-clearance: calc(37px + env(safe-area-inset-bottom) + 6px);
 }
 /* 앱 전체에서 롱프레스 시 텍스트 선택/콜아웃(복사 등) UI가 절대 뜨지 않게 함.
    이전에는 #view-eung 안쪽에만 걸었는데, 필기 캔버스(#drawCanvas)가 #app의
@@ -157,10 +158,14 @@ canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 10
 .btn-secondary { background: var(--ink); color: #fff; }
 .btn-ghost { background: var(--surface); color: var(--ink); border: 1.5px solid var(--border); }
 
-/* 사이드 도킹 필기 도구 */
+/* 사이드 도킹 필기 도구.
+   right/left를 0이 아니라 살짝 띄워서(6px) 화면 진짜 가장자리를 벗어나게 함 —
+   iPadOS는 화면 맨 끝 가장자리에서 시작되는 스와이프를 Slide Over(다른 앱을
+   화면 옆에 여는) 제스처로 가로채는데, 손잡이가 딱 가장자리에 붙어 있으면
+   손잡이를 드래그하려던 손짓이 그 시스템 제스처로 오인식될 수 있음 */
 .pen-dock {
   position: fixed;
-  right: 0;
+  right: 6px;
   top: 55%;
   transform: translateY(-50%);
   z-index: 25;
@@ -208,8 +213,9 @@ canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 10
 }
 .pen-drawer.open { opacity: 1; pointer-events: auto; transform: translateY(-50%) translateX(0); }
 
-/* 왼쪽에 도킹된 경우: 손잡이가 왼쪽 가장자리에 붙고, 서랍은 오른쪽으로 펼쳐짐 */
-.pen-dock.dock-left { right: auto; left: 0; }
+/* 왼쪽에 도킹된 경우: 손잡이가 왼쪽 가장자리에 붙고, 서랍은 오른쪽으로 펼쳐짐
+   (오른쪽과 마찬가지로 진짜 가장자리에서 6px 띄워서 Slide Over 오인식 방지) */
+.pen-dock.dock-left { right: auto; left: 6px; }
 .pen-dock.dock-left .pen-handle {
   border-radius: 0 16px 16px 0;
   box-shadow: 6px 0 16px rgba(18, 19, 26, 0.22);
@@ -328,17 +334,18 @@ canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 10
   .btn { padding: 8px 12px; font-size: 13px; }
 }
 
-/* bottom tab bar: 문제 풀이 공간을 최대한 확보하기 위해 최대한 얇게(패딩/아이콘/라벨 축소) */
+/* bottom tab bar: 하단탭바 두께 최소화 — 탭 버튼이 눌리는 데 지장 없는 한도
+   내에서 패딩/아이콘/라벨을 최대한 줄여서 문제 풀이 공간을 더 확보함 */
 .tabbar {
   position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border);
-  display: flex; padding: 3px 6px calc(3px + env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; padding: 2px 6px calc(2px + env(safe-area-inset-bottom)); z-index: 30;
   touch-action: manipulation;
 }
 .tab-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px 2px; border: none;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 1px 2px; border: none;
   background: transparent; cursor: pointer; color: var(--ink-faint); font-family: "Pretendard", sans-serif;
   -webkit-tap-highlight-color: transparent; border-radius: 12px;
 }
-.tab-item .tab-icon { font-size: 16px; line-height: 1; }
-.tab-item .tab-label { font-size: 9.5px; font-weight: 600; }
+.tab-item .tab-icon { font-size: 15px; line-height: 1.2; }
+.tab-item .tab-label { font-size: 8.5px; font-weight: 600; }
 .tab-item.active { color: var(--primary); }
