@@ -30,7 +30,11 @@
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
 }
-html, body { margin: 0; padding: 0; }
+/* overscroll-behavior:none — 화면 가장자리에서 당길 때 생기는 바운스/오버스크롤
+   제스처가 필기용 포인터 이벤트와 경합하지 않게 함. touch-action:manipulation은
+   더블탭 확대만 막고 일반 스크롤/탭은 허용(캔버스 등 개별 요소의 touch-action:none은
+   더 구체적인 선택자라 그대로 우선 적용됨) */
+html, body { margin: 0; padding: 0; overscroll-behavior: none; touch-action: manipulation; }
 /* body 높이를 뷰포트에 정확히 고정(min-height가 아니라 height)해서, 정답 확인 후
    해설처럼 내용이 늘어나도 페이지 전체가 뷰포트보다 커지지 않게 함. 못 담는 내용은
    .writable 안에서만 스크롤되고(overflow-y:auto), 하단 버튼은 항상 화면 안에 유지됨.
