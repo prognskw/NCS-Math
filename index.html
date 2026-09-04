@@ -41,7 +41,6 @@
   </div>
 
   <div id="app">
-    <canvas class="draw-layer" id="drawCanvas"></canvas>
     <div class="app-header">
       <svg class="logo-mark" width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="40" height="40" rx="11" fill="#12131A"/>
@@ -83,10 +82,14 @@
       <div class="card" id="problemCard">
         <div class="accent-bar" id="accentBar"></div>
         <div class="card-top">
-          <span class="q-number">문제</span>
-          <span class="type-badge" id="typeBadge">유형</span>
+          <span class="q-number" id="qNumber">문제</span>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <span class="diff-badge" id="diffBadge">난이도</span>
+            <span class="type-badge" id="typeBadge">유형</span>
+          </div>
         </div>
         <div class="writable" id="writable">
+          <canvas class="draw-layer" id="drawCanvas"></canvas>
           <div class="problem-wrap" id="problemWrap">
             <div class="problem-text" id="problemText"></div>
             <div id="tableSlot"></div>
