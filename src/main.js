@@ -38,6 +38,9 @@ const hideDrawingBtn = document.getElementById("hideDrawingBtn");
 const clearAllBtn = document.getElementById("clearAllBtn");
 const canvas = document.getElementById("drawCanvas");
 const ctx = canvas.getContext("2d");
+// CSS의 touch-action: none이 확실히 적용되도록 JS에서도 인라인으로 한 번 더
+// 명시 (CSS 우선순위/타이밍 이슈 배제용)
+canvas.style.touchAction = "none";
 const appEl = document.getElementById("app");
 const headerEl = document.querySelector(".app-header");
 const problemCard = document.getElementById("problemCard");
@@ -275,6 +278,10 @@ function setPenMode(next) {
   penModeBtn.textContent = penMode ? "✎ 필기 입력 끄기" : "✎ 필기 입력 켜기";
   penHandle.classList.toggle("pen-on", penMode);
   canvas.style.pointerEvents = penMode ? "auto" : "none";
+  // 필기 모드 중엔 시스템이 애초에 "스크롤 후보"로 판단할 건수 자체를 없애서
+  // pointercancel 오인식을 줄임 (캔버스가 헤더~카드 전체를 덮어 페이지가
+  // 스크롤될 여지가 있으므로)
+  document.body.style.overflow = penMode ? "hidden" : "";
 }
 penModeBtn.addEventListener("click", () => setPenMode(!penMode));
 
@@ -439,6 +446,28 @@ function scheduleRedraw() {
     redraw();
   });
 }
+
+// Safari/iPadOS는 터치 시작 직후의 움직임을 자체적으로 "스크롤/줌 같은 시스템
+// 제스처"로 판단해서, 그 판정이 끝나기 전까지 포인터를 붙잡고 있다가 시스템
+// 제스처로 결론 내리면 웹페이지 쪽 포인터를 강제로 pointercancel시켜버리는
+// 경우가 있음 (온디바이스 로그로 확인: pointercancel로 끝난 획은 전부
+// pointsInStroke:0, 즉 그리기 시작 즉시 취소됨). touch-action:none과 pointer
+// 이벤트의 preventDefault()만으로는 이 네이티브 판정 자체를 막지 못해서,
+// touch 이벤트 레벨에서도 명시적으로 막아줌.
+canvas.addEventListener(
+  "touchstart",
+  (e) => {
+    if (penMode) e.preventDefault();
+  },
+  { passive: false }
+);
+canvas.addEventListener(
+  "touchmove",
+  (e) => {
+    if (penMode) e.preventDefault();
+  },
+  { passive: false }
+);
 
 canvas.addEventListener("pointerdown", (e) => {
   if (!penMode) return;
