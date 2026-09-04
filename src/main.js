@@ -85,7 +85,7 @@ function resizeCanvas() {
   canvas.style.width = width + "px";
   canvas.style.height = height + "px";
 
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2); // 상한 2로 제한 (스크린샷 캡처 시 깨지는 문제 완화)
   canvas.width = width * dpr;
   canvas.height = height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
