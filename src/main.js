@@ -1,4 +1,5 @@
 import "./style.css";
+import { getStroke } from "perfect-freehand";
 import { problems, typeColors } from "./data/problems.js";
 import { loadStrokes, saveStrokes, clearStrokes, syncFromCloud } from "./storage.js";
 
@@ -87,44 +88,32 @@ function resizeCanvas() {
   redraw();
 }
 
-// stroke의 선/색/합성모드를 캔버스 컨텍스트에 적용 (redraw와 증분 드로잉이 공유)
-function applyStrokeStyle(stroke) {
-  ctx.strokeStyle = stroke.erase ? "rgba(0,0,0,1)" : stroke.color;
-  ctx.fillStyle = ctx.strokeStyle;
-  ctx.globalCompositeOperation = stroke.erase ? "destination-out" : "source-over";
-  ctx.lineWidth = stroke.size;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-}
+// perfect-freehand로 점 배열(+압력)을 매끄러운 "채워진 도형"의 외곽선으로 계산해서
+// fill로 그림. 직접 lineTo/quadraticCurveTo로 선을 잇던 방식보다 압력 반영과
+// 매끄러움이 훨씬 안정적이라 draw/redraw 양쪽 모두 이 함수 하나로 통일함.
+function drawStroke(strokePoints, color, size, erase) {
+  if (strokePoints.length < 2) return;
 
-function midpoint(a, b) {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
+  const inputPoints = strokePoints.map((p) => [p.x, p.y, p.pressure ?? 0.5]);
+  const outline = getStroke(inputPoints, {
+    size: size * 2.2,
+    thinning: 0.6,
+    smoothing: 0.5,
+    streamline: 0.5,
+    simulatePressure: false,
+  });
 
-// 점과 점을 직선(lineTo)으로만 잇지 않고, 점 사이 중간점을 지나는 2차 베지어
-// 곡선으로 이어서 방향이 빠르게 바뀌는 구간(o, s, e 등)도 꺾이지 않게 함.
-// redraw()(전체 재렌더)와 증분 드로잉(paintIncrementalSegment) 둘 다 이 방식을 씀.
-function drawStrokeSmooth(stroke) {
-  const pts = stroke.points;
-  if (!pts.length) return;
-  applyStrokeStyle(stroke);
-  if (pts.length < 2) {
-    // 탭만 하고 움직이지 않은 경우: 점 하나만 찍힘
-    ctx.beginPath();
-    ctx.arc(pts[0].x, pts[0].y, stroke.size / 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
-    return;
-  }
+  if (!outline.length) return;
+
+  ctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
+  ctx.fillStyle = erase ? "rgba(0,0,0,1)" : color;
   ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mid = midpoint(pts[i], pts[i + 1]);
-    ctx.quadraticCurveTo(pts[i].x, pts[i].y, mid.x, mid.y);
+  ctx.moveTo(outline[0][0], outline[0][1]);
+  for (let i = 1; i < outline.length; i++) {
+    ctx.lineTo(outline[i][0], outline[i][1]);
   }
-  // 중간점까지만 이으면 마지막 점 근처가 살짝 못 미쳐 그려지므로 끝점까지 마무리
-  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  ctx.stroke();
+  ctx.closePath();
+  ctx.fill();
   ctx.globalCompositeOperation = "source-over";
 }
 
@@ -132,7 +121,7 @@ function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const p = currentProblem();
   const strokes = strokesByProblem[p.id] || [];
-  strokes.forEach((s) => drawStrokeSmooth(s));
+  strokes.forEach((s) => drawStroke(s.points, s.color, s.size, s.erase));
 }
 
 function persistStrokes() {
@@ -425,19 +414,16 @@ penHandle.addEventListener("pointercancel", () => {
 });
 
 // ---- 필기 그리기 ----
-// 빠르게 그을 때 획이 끊겨 보이는 문제 개선:
-// 1) pointermove 하나당 좌표 하나만 쓰지 않고 getCoalescedEvents()로 브라우저가
-//    묶어서 전달한 세부 좌표를 전부 사용 (좌표 샘플 손실 방지)
-// 2) 매번 캔버스 전체를 지우고 다시 그리는(redraw) 대신, 그리는 도중에는
-//    새로 들어온 구간만 direct(위쪽 drawStrokeSmooth와 같은 2차 베지어 방식으로)
-//    이어 그리는 증분 드로잉 사용 + requestAnimationFrame으로 한 프레임에 여러
-//    이벤트를 모아 한 번만 페인트 (scheduleRedraw)
-// redraw()(전체 재렌더)는 문제 전환/undo/redo/전체 지우기/리사이즈 때만 호출됨.
-// 3) Apple Pencil 외 입력(손가락/손바닥)은 무시 — 필기 중 손바닥이 닿아도
-//    별도 포인터로 잡혀서 획이 끊기거나 겹치지 않게 함
+// perfect-freehand 기반 렌더링(drawStroke)으로 통일했으므로, 그리는 도중에도
+// 매 프레임 redraw()(전체 재렌더 + 현재 진행 중인 stroke 포함)를 호출하면
+// 됨 — activeStroke가 이미 strokesByProblem 배열에 들어있어 redraw()가
+// 자동으로 최신 상태까지 그려줌. requestAnimationFrame으로 한 프레임에 여러
+// pointermove 이벤트를 모아 redraw()를 한 번만 호출(scheduleRedraw).
+// 좌표 샘플 손실 방지를 위해 getCoalescedEvents()로 세부 좌표까지 전부 저장.
+// Apple Pencil 외 입력(손가락/손바닥)은 무시 — 필기 중 손바닥이 닿아도
+// 별도 포인터로 잡혀서 획이 끊기거나 겹치지 않게 함.
 let drawing = false;
 let activeStroke = null;
-let pendingPoints = [];
 let rafScheduled = false;
 
 function getPos(e) {
@@ -445,69 +431,12 @@ function getPos(e) {
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-// 클릭/탭만 하고 움직이지 않아도 점 하나는 보이도록 시작점에 작은 점을 찍음
-function paintDot(stroke, pos) {
-  applyStrokeStyle(stroke);
-  ctx.beginPath();
-  ctx.arc(pos.x, pos.y, stroke.size / 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
-}
-
-// stroke.points에 새 점이 막 추가된 직후 호출: 최근 점 3개를 이용해 부드러운
-// 곡선 조각 하나만 이어 그림 (drawStrokeSmooth와 동일한 중간점 방식이지만
-// 캔버스 전체를 다시 그리지 않고 이번에 새로 생긴 구간만 그림)
-function paintIncrementalSegment(stroke) {
-  const pts = stroke.points;
-  const n = pts.length;
-  if (n < 2) return;
-  const p1 = pts[n - 2];
-  const p2 = pts[n - 1];
-  const start = n >= 3 ? midpoint(pts[n - 3], p1) : p1;
-  const end = midpoint(p1, p2);
-  applyStrokeStyle(stroke);
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.quadraticCurveTo(p1.x, p1.y, end.x, end.y);
-  ctx.stroke();
-  ctx.globalCompositeOperation = "source-over";
-}
-
-// 중간점까지만 이어 그려서 실제 마지막 점 직전에서 살짝 못 미친 상태이므로,
-// 스트로크가 끝날 때 진짜 마지막 점까지 마무리 (drawStrokeSmooth의 마무리와 동일)
-function finishStrokeTail(stroke) {
-  const pts = stroke.points;
-  const n = pts.length;
-  if (n < 2) return;
-  const last = pts[n - 1];
-  const prevMid = midpoint(pts[n - 2], last);
-  applyStrokeStyle(stroke);
-  ctx.beginPath();
-  ctx.moveTo(prevMid.x, prevMid.y);
-  ctx.lineTo(last.x, last.y);
-  ctx.stroke();
-  ctx.globalCompositeOperation = "source-over";
-}
-
-// 아직 화면에 그려지지 않고 대기 중인 좌표들을 실제로 페인트하고 비움
-function flushPendingPoints() {
-  if (!activeStroke || !pendingPoints.length) return;
-  pendingPoints.forEach((pos) => {
-    activeStroke.points.push(pos);
-    paintIncrementalSegment(activeStroke);
-  });
-  pendingPoints = [];
-}
-
 function scheduleRedraw() {
   if (rafScheduled) return;
   rafScheduled = true;
   requestAnimationFrame(() => {
     rafScheduled = false;
-    // rAF가 실행되기 전에 이미 stroke가 끝났으면(endStroke에서 동기적으로
-    // flush 처리함) 여기선 아무것도 하지 않음
-    if (!drawing) return;
-    flushPendingPoints();
+    redraw();
   });
 }
 
@@ -521,13 +450,12 @@ canvas.addEventListener("pointerdown", (e) => {
   const pressure = e.pressure > 0 ? e.pressure : 0.5;
   const erasing = tool === "eraser";
   const baseSize = erasing ? currentSize * 6 : currentSize + pressure * 2.5;
-  activeStroke = { color: currentColor, size: baseSize, erase: erasing, points: [pos] };
+  activeStroke = { color: currentColor, size: baseSize, erase: erasing, points: [{ ...pos, pressure }] };
   const p = currentProblem();
   strokesByProblem[p.id] = strokesByProblem[p.id] || [];
   strokesByProblem[p.id].push(activeStroke);
   redoByProblem[p.id] = [];
-  pendingPoints = [];
-  paintDot(activeStroke, pos);
+  scheduleRedraw();
 });
 
 canvas.addEventListener("pointermove", (e) => {
@@ -536,19 +464,16 @@ canvas.addEventListener("pointermove", (e) => {
   e.preventDefault();
   const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
   const pts = events.length ? events : [e];
-  pts.forEach((ev) => pendingPoints.push(getPos(ev)));
+  pts.forEach((ev) => {
+    activeStroke.points.push({ ...getPos(ev), pressure: ev.pressure || 0.5 });
+  });
   scheduleRedraw();
 });
 
 function endStroke() {
-  if (drawing) {
-    flushPendingPoints();
-    finishStrokeTail(activeStroke);
-    persistStrokes();
-  }
+  if (drawing) persistStrokes();
   drawing = false;
   activeStroke = null;
-  pendingPoints = [];
 }
 canvas.addEventListener("pointerup", endStroke);
 canvas.addEventListener("pointercancel", endStroke);
