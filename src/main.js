@@ -444,6 +444,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (!penMode) return;
   if (e.pointerType !== "pen") return; // 손가락/손바닥 터치는 무시, Apple Pencil만 인정
   e.preventDefault();
+  if (drawing) endStroke(e); // 이전 스트로크가 비정상 종료된 경우 방어적으로 먼저 정리
   drawing = true;
   canvas.setPointerCapture(e.pointerId);
   const pos = getPos(e);
@@ -470,10 +471,20 @@ canvas.addEventListener("pointermove", (e) => {
   scheduleRedraw();
 });
 
-function endStroke() {
+// pointerup 시 브라우저가 자동으로 캡처를 풀어야 하지만, Safari/iPadOS
+// 조합에서는 이게 확실히 안 풀려서 다음 펜 터치 이벤트가 캔버스에 제대로
+// 전달되지 않는(=두 번째 획부터 인식 안 되는) 경우가 있어 명시적으로 해제함.
+function endStroke(e) {
   if (drawing) persistStrokes();
   drawing = false;
   activeStroke = null;
+  if (e && e.pointerId !== undefined) {
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch (err) {
+      // 이미 해제되었거나 캡처된 적 없는 경우 조용히 무시
+    }
+  }
 }
 canvas.addEventListener("pointerup", endStroke);
 canvas.addEventListener("pointercancel", endStroke);
