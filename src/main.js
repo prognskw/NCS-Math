@@ -29,6 +29,8 @@ allProblems.forEach((p) => {
 const problemText = document.getElementById("problemText");
 const tableSlot = document.getElementById("tableSlot");
 const typeBadge = document.getElementById("typeBadge");
+const qNumberEl = document.getElementById("qNumber");
+const diffBadge = document.getElementById("diffBadge");
 const progressEl = document.getElementById("progress");
 const choicesEl = document.getElementById("choices");
 const explainEl = document.getElementById("explain");
@@ -45,6 +47,7 @@ canvas.style.touchAction = "none";
 const appEl = document.getElementById("app");
 const headerEl = document.querySelector(".app-header");
 const problemCard = document.getElementById("problemCard");
+const writable = document.getElementById("writable");
 const accentBar = document.getElementById("accentBar");
 const typeFilterEl = document.getElementById("typeFilter");
 
@@ -70,24 +73,17 @@ function currentProblem() {
   return filtered[current];
 }
 
-// 캔버스는 #app 최상단(헤더)부터 문제 카드 하단까지 화면에 보이는 전체 영역을
-// 덮도록 배치한다 (헤더, 유형 필터, 카드 바깥 여백 어디에 그려도 필기가 남게 됨).
+// 캔버스는 문제 카드 안(writable, 문제+선지 영역)만 덮는다. 헤더/유형 필터까지
+// 필기가 새는 걸 막기 위해 예전 방식으로 되돌림.
 function resizeCanvas() {
-  const appRect = appEl.getBoundingClientRect();
-  const headerRect = headerEl.getBoundingClientRect();
-  const cardRect = problemCard.getBoundingClientRect();
-  const top = headerRect.top - appRect.top;
-  const height = cardRect.bottom - headerRect.top;
-  const width = appRect.width;
-
+  const rect = writable.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.style.left = "0px";
-  canvas.style.top = top + "px";
-  canvas.style.width = width + "px";
-  canvas.style.height = height + "px";
-
-  const dpr = Math.min(window.devicePixelRatio || 1, 2); // 상한 2로 제한 (스크린샷 캡처 시 깨지는 문제 완화)
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
+  canvas.style.top = "0px";
+  canvas.style.width = rect.width + "px";
+  canvas.style.height = rect.height + "px";
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   redraw();
 }
@@ -167,6 +163,9 @@ function renderProblem() {
   typeBadge.style.color = color;
   typeBadge.style.background = color + "1A";
   accentBar.style.background = color;
+  qNumberEl.textContent = `문제 ${String(p.number).padStart(2, "0")}`;
+  diffBadge.textContent = p.difficulty;
+  diffBadge.className = "diff-badge diff-" + p.difficulty;
   progressEl.textContent = `${current + 1} / ${filtered.length}`;
   problemText.innerHTML = formatFractions(escapeHtml(p.text));
 
