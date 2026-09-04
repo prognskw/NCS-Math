@@ -234,7 +234,9 @@ canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 10
   background: #1a1c23;
   border-radius: 18px;
   padding: 12px 14px;
-  width: 230px;
+  /* 색상 스와치 6개(프리셋 5 + 무지개 커스텀), 굵기 버튼 5개가 한 줄에 다
+     들어가도록 넉넉하게 (270px 미만이면 줄바꿈되어 정렬이 흐트러짐) */
+  width: 270px;
   box-shadow: 0 14px 30px rgba(18, 19, 26, 0.3);
   display: flex;
   flex-direction: column;
@@ -331,6 +333,15 @@ canvas.draw-layer { position: absolute; left: 0; top: 0; width: 100%; height: 10
 .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; position: relative; }
 .swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15); }
 .swatch.active::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+/* 무지개 그라데이션 배경 위에 투명한 <input type="color">를 겹쳐서, 탭하면
+   iOS 시스템 색상 선택기가 뜨도록 함 (자유롭게 색 고르기) */
+.custom-swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
 .size-btn { width: 32px; height: 32px; border-radius: 10px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .size-btn span { display: block; border-radius: 50%; background: #c7c9d6; }
 .size-btn.active { background: rgba(255, 255, 255, 0.14); }
