@@ -33,6 +33,7 @@ const progressEl = document.getElementById("progress");
 const choicesEl = document.getElementById("choices");
 const explainEl = document.getElementById("explain");
 const checkBtn = document.getElementById("checkBtn");
+const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const hideDrawingBtn = document.getElementById("hideDrawingBtn");
 const clearAllBtn = document.getElementById("clearAllBtn");
@@ -248,9 +249,14 @@ checkBtn.addEventListener("click", () => {
   gradeAnswer();
 });
 
-// 정답을 고르지 않아도 다음 문제로 넘어갈 수 있음
+// 정답을 고르지 않아도 다음/이전 문제로 넘어갈 수 있음
 nextBtn.addEventListener("click", () => {
   current = (current + 1) % filtered.length;
+  renderProblem();
+});
+
+prevBtn.addEventListener("click", () => {
+  current = (current - 1 + filtered.length) % filtered.length;
   renderProblem();
 });
 
