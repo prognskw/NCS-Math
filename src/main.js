@@ -463,6 +463,12 @@ canvas.addEventListener("pointermove", (e) => {
   if (!drawing || !penMode) return;
   if (e.pointerType !== "pen") return;
   e.preventDefault();
+  // ⚠️ 진단용 임시 로그 — 원인 파악 후 반드시 제거
+  const rect = canvas.getBoundingClientRect();
+  const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+  if (!inside) {
+    console.log("[OUT OF BOUNDS MOVE]", { clientX: e.clientX, clientY: e.clientY, rect });
+  }
   const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
   const pts = events.length ? events : [e];
   pts.forEach((ev) => {
@@ -475,6 +481,17 @@ canvas.addEventListener("pointermove", (e) => {
 // 조합에서는 이게 확실히 안 풀려서 다음 펜 터치 이벤트가 캔버스에 제대로
 // 전달되지 않는(=두 번째 획부터 인식 안 되는) 경우가 있어 명시적으로 해제함.
 function endStroke(e) {
+  // ⚠️ 진단용 임시 로그 — 원인 파악 후 반드시 제거
+  console.log("[END STROKE]", {
+    reason: e ? e.type : "unknown",
+    pointsInStroke: activeStroke ? activeStroke.points.length : 0,
+    lastPoint: activeStroke && activeStroke.points.length
+      ? activeStroke.points[activeStroke.points.length - 1]
+      : null,
+    clientX: e ? e.clientX : null,
+    clientY: e ? e.clientY : null,
+    canvasRect: canvas.getBoundingClientRect(),
+  });
   if (drawing) persistStrokes();
   drawing = false;
   activeStroke = null;
