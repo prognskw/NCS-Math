@@ -15,8 +15,8 @@ let answered = false;
 let selectedChoice = null;
 let penMode = false;
 let tool = "pen"; // 'pen' | 'eraser'
-let currentColor = "#3654FF";
-let currentSize = 2.5;
+let currentColor = "#12131A";
+let currentSize = 1.2;
 
 // 문제별 필기 - 처음엔 localStorage에서 불러오고, 그리기가 끝날 때마다 다시 저장 (id 기준)
 const strokesByProblem = {};
@@ -99,7 +99,7 @@ function drawStroke(strokePoints, color, size, erase) {
 
   const inputPoints = strokePoints.map((p) => [p.x, p.y, p.pressure ?? 0.5]);
   const outline = getStroke(inputPoints, {
-    size: size * 2.2,
+    size: size * 1.6,
     thinning: 0.6,
     smoothing: 0.5,
     streamline: 0.5,
@@ -324,13 +324,25 @@ document.querySelectorAll(".size-btn").forEach((sb) => {
   });
 });
 
-document.querySelectorAll(".swatch").forEach((sw) => {
+// .custom-swatch(무지개 스와치)는 자체 클릭 핸들러가 아니라 감싸고 있는
+// <input type="color">의 input 이벤트로 색을 반영하므로 여기서 제외
+document.querySelectorAll(".swatch:not(.custom-swatch)").forEach((sw) => {
   sw.addEventListener("click", () => {
     document.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active"));
     sw.classList.add("active");
     currentColor = sw.dataset.color;
     setTool("pen");
   });
+});
+
+// 무지개 스와치를 탭하면 iOS가 시스템 색상 선택기(최근 사용한 색 포함)를 그대로
+// 띄워주므로, 별도 팔레트 UI 없이 "자유롭게 색 고르기"가 해결됨
+const customColorInput = document.getElementById("customColorInput");
+customColorInput.addEventListener("input", (e) => {
+  document.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active"));
+  customColorInput.closest(".swatch").classList.add("active");
+  currentColor = e.target.value;
+  setTool("pen");
 });
 
 // ---- 사이드 도킹: 세로/가로 드래그로 위치 이동, 탭하면 서랍 열기/닫기 ----
@@ -492,12 +504,6 @@ canvas.addEventListener("pointermove", (e) => {
   if (!drawing || !penMode) return;
   if (e.pointerType !== "pen") return;
   e.preventDefault();
-  // ⚠️ 진단용 임시 로그 — 원인 파악 후 반드시 제거
-  const rect = canvas.getBoundingClientRect();
-  const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-  if (!inside) {
-    console.log("[OUT OF BOUNDS MOVE]", { clientX: e.clientX, clientY: e.clientY, rect });
-  }
   const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
   const pts = events.length ? events : [e];
   pts.forEach((ev) => {
@@ -510,17 +516,6 @@ canvas.addEventListener("pointermove", (e) => {
 // 조합에서는 이게 확실히 안 풀려서 다음 펜 터치 이벤트가 캔버스에 제대로
 // 전달되지 않는(=두 번째 획부터 인식 안 되는) 경우가 있어 명시적으로 해제함.
 function endStroke(e) {
-  // ⚠️ 진단용 임시 로그 — 원인 파악 후 반드시 제거
-  console.log("[END STROKE]", {
-    reason: e ? e.type : "unknown",
-    pointsInStroke: activeStroke ? activeStroke.points.length : 0,
-    lastPoint: activeStroke && activeStroke.points.length
-      ? activeStroke.points[activeStroke.points.length - 1]
-      : null,
-    clientX: e ? e.clientX : null,
-    clientY: e ? e.clientY : null,
-    canvasRect: canvas.getBoundingClientRect(),
-  });
   if (drawing) persistStrokes();
   drawing = false;
   activeStroke = null;
