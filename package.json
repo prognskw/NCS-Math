@@ -12,6 +12,7 @@
     "vite": "^8.2.2"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.114.0"
+    "@supabase/supabase-js": "^2.114.0",
+    "perfect-freehand": "^1.2.3"
   }
 }
